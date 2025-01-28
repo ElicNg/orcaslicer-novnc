@@ -1,6 +1,6 @@
 #!/bin/bash
   
-image="flow1985/orcaslicer-novnc"  
+image="elicng/orcaslicer-novnc"  
   
 # Set the timestamp
 timestamp=$(date +%Y.%m.%d.%H%M%S)  

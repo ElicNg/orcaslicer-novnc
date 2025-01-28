@@ -25,4 +25,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: mikeah/orcaslicer-novnc:latest, mikeah/orcaslicer-novnc:${{ steps.date.outputs.date }}
+          tags: elicng/orcaslicer-novnc:latest, elicng/orcaslicer-novnc:${{ steps.date.outputs.date }}
