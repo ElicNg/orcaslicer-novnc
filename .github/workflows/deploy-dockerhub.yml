@@ -18,10 +18,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: docker-image
-          path: /tmp/artifacts
+          path: /artifacts
 
       - name: Load Docker image
-        run: docker load -i /tmp/artifacts/docker-image.tar
+        run: docker load -i /artifacts/docker-image.tar
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
