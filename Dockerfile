@@ -1,27 +1,22 @@
 # Stage 1: Build Easy noVNC
 FROM golang:bookworm AS easy-novnc-build
 WORKDIR /src
-RUN go mod init build && \
-    go install github.com/geek1011/easy-novnc@v1.1.0
+RUN go mod init build && go install github.com/geek1011/easy-novnc@v1.1.0
 
 # Stage 2: Main Image
 FROM debian:trixie-slim
 
-# Define default UID/GID for Unraid
 ARG PUID=99
 ARG PGID=100
 
-# Set environment variables for locale
+# Set locale environment variables
 ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
+    LC_ALL=en_US.UTF-8 \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
-# Set this so that Orca Slicer doesn't complain about
-# the CA cert path on every startup
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-
-# Install dependencies and configure locale
-RUN apt-get update -y && apt-get install -y --no-install-recommends \
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     openbox tigervnc-standalone-server supervisor gosu \
     lxterminal nano wget openssh-client rsync ca-certificates xdg-utils htop \
     tar xzip gzip bzip2 zip unzip \
@@ -32,10 +27,10 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev \
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
     gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools squashfuse fuse libfuse2 \
+    libglu1-mesa libglx-mesa0 \
     gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 \
     gstreamer1.0-qt5 gstreamer1.0-pulseaudio jq curl git firefox-esr && \
-    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
-    locale-gen && \
+    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && locale-gen && \
     update-locale LANG=${LANG} LANGUAGE=${LANGUAGE} LC_ALL=${LC_ALL} && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -52,16 +47,13 @@ RUN chmod +x /opt/orcaslicer/get_release_info.sh && mkdir -p /opt/orcaslicer/orc
 RUN latestOrcaslicer=$(/opt/orcaslicer/get_release_info.sh url) && \
     curl -sSL ${latestOrcaslicer} -o /opt/orcaslicer/orcaslicer-dist/orcaslicer.AppImage && \
     chmod +x /opt/orcaslicer/orcaslicer-dist/orcaslicer.AppImage && \
-    dd if=/dev/zero bs=1 count=3 seek=8 conv=notrunc of=/opt/orcaslicer/orcaslicer-dist/orcaslicer.AppImage && \
-    bash -c "/opt/orcaslicer/orcaslicer-dist/orcaslicer.AppImage --appimage-extract"
+    /opt/orcaslicer/orcaslicer-dist/orcaslicer.AppImage --appimage-extract || \
+    (mkdir squashfs-root && squashfuse /opt/orcaslicer/orcaslicer-dist/orcaslicer.AppImage squashfs-root)
 
 # Create user and directories with proper permissions
-RUN if ! getent group ${PGID}; then groupadd -g ${PGID} orcaslicer; fi && \
-    if ! id -u ${PUID} >/dev/null 2>&1; then \
-        useradd -u ${PUID} -g $(getent group ${PGID} | cut -d: -f1) -m -d /home/orcaslicer orcaslicer; \
-    fi && \
-    mkdir -p /etc/orcaslicer /var/lib/orcaslicer /opt/orcaslicer && \
-    chown -R ${PUID}:${PGID} /etc/orcaslicer /var/lib/orcaslicer /opt/orcaslicer /home/orcaslicer
+RUN groupadd -o -g ${PGID} orcaslicer 2>/dev/null || true && \
+    useradd -o -u ${PUID} -g orcaslicer -m -d /home/orcaslicer orcaslicer 2>/dev/null || true && \
+    chown -R ${PUID}:${PGID} /home/orcaslicer
 
 # Set up configuration directories
 RUN if [ -d /home/orcaslicer/.config ] && [ ! -L /home/orcaslicer/.config ]; then \
@@ -71,8 +63,8 @@ RUN if [ -d /home/orcaslicer/.config ] && [ ! -L /home/orcaslicer/.config ]; the
     echo "XDG_DOWNLOAD_DIR=\"/var/lib/orcaslicer/\"" >> /home/orcaslicer/.config/user-dirs.dirs && \
     echo "file:///var/lib/orcaslicer/ prints" >> /home/orcaslicer/.gtk-bookmarks
 
-# Set up supervisord output permissions
-RUN touch /var/log/supervisord.log && chmod 666 /var/log/supervisord.log
+# Set up supervisord logging
+RUN mkdir -p /var/log/supervisord && chmod 777 /var/log/supervisord
 
 # Copy noVNC and UI configuration files
 COPY --from=easy-novnc-build /go/bin/easy-novnc /usr/local/bin/
@@ -83,5 +75,5 @@ COPY supervisord.conf /etc/
 EXPOSE 8080
 VOLUME /etc/orcaslicer /var/lib/orcaslicer
 
-# Set the default user and entrypoint
+# Run supervisord
 ENTRYPOINT ["supervisord", "-c", "/etc/supervisord.conf"]
