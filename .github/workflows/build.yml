@@ -28,7 +28,6 @@ jobs:
 
       - name: Save Docker image as artifact
         run: |
-          mkdir -p /artifacts
           docker save -o docker-image.tar ${{ env.IMAGE_NAME }}:latest
 
       - name: Upload Docker image artifact (v4)
