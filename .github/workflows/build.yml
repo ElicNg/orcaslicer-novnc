@@ -39,6 +39,6 @@ jobs:
           retention-days: 1
 
       - name: List uploaded artifacts
-        run: gh run artifacts --repo ${{ github.repository }} --limit 5
+        run: gh run artifacts --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
