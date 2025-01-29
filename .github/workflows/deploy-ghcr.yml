@@ -18,12 +18,17 @@ jobs:
       contents: read
 
     steps:
-      - name: Download Docker image artifact (v4)
-        uses: actions/download-artifact@v4
+      - name: Download Docker image artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v8
         with:
-          name: docker-image.tar
-          run-id: ${{ github.event.workflow_run.id }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: build.yml
+          name: docker-image
           path: ${{ runner.temp }}
+
+      - name: Check downloaded artifacts
+        run: ls -lah ${{ runner.temp }}
 
       - name: Load Docker image
         run: docker load -i ${{ runner.temp }}/docker-image.tar

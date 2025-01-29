@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          load: true  # Ensures image is available locally
+          load: true 
           tags: ${{ env.IMAGE_NAME }}:latest
 
       - name: Save Docker image as artifact
@@ -33,7 +33,12 @@ jobs:
       - name: Upload Docker image artifact (v4)
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image.tar
+          name: docker-image
           path: ${{ runner.temp }}/docker-image.tar
-          compression-level: 0  # Optimized for large artifacts
+          compression-level: 0
           retention-days: 1
+
+      - name: List uploaded artifacts
+        run: gh run artifacts --repo ${{ github.repository }} --limit 5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
