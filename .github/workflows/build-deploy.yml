@@ -93,7 +93,9 @@ jobs:
 
       - name: Push Docker image to GHCR
         run: |
-          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.REGISTRY }}/${{ github.repository }}:latest
-          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
-          docker push ${{ env.REGISTRY }}/${{ github.repository }}:latest
-          docker push ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
+          GHCR_REPO="ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
+          LOWERCASE_REPO=$(echo "$GHCR_REPO" | tr '[:upper:]' '[:lower:]')
+          docker tag ${{ env.IMAGE_NAME }}:latest $LOWERCASE_REPO:latest
+          docker tag ${{ env.IMAGE_NAME }}:latest $LOWERCASE_REPO:${{ github.sha }}
+          docker push $LOWERCASE_REPO:latest
+          docker push $LOWERCASE_REPO:${{ github.sha }}
